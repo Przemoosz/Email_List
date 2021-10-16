@@ -13,3 +13,9 @@ def scrap_persons(page):
         list_of_persons.append(link)
     return list_of_persons
 
+def scrap_person_info(http_responses,url_lists):
+    persons_info=[]
+    for page in http_responses:
+        soup = BeautifulSoup(page,'lxml')
+        persons_info.append(soup.find('h1').text)
+    print(list(zip(persons_info,url_lists)))
