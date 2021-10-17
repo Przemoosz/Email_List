@@ -43,3 +43,8 @@ def getting_better_info(information_list):
             continue
 
     return returning_list
+
+def file_read():
+    with open('mail_context.txt', 'r', encoding='utf-8') as file:
+        text = file.read()
+        return text
