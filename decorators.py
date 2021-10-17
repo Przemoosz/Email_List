@@ -3,7 +3,7 @@ import time
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0
+Version: 1.0.1
 Update date: 17.10.2021
 Python: 3.9.7
 It is decorator file nothing interesting here.

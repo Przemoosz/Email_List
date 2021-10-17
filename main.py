@@ -6,7 +6,7 @@ from functions import scrap_person_info
 from decorators import func_timer
 '''
 Creator: Przemysław Szewczak
-Version: 1.0
+Version: 1.0.1
 Creation date: 16.10.2021
 Update date: 17.10.2021
 Python: 3.9.7
