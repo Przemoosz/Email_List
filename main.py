@@ -1,14 +1,16 @@
 import asyncio
+import aiohttp
 from asyncfunctions import (http_req,
                             http_request_first_page,
                             save)
 from functions import scrap_person_info
 from decorators import func_timer
+
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.1
+Version: 1.0.2
 Creation date: 16.10.2021
-Update date: 17.10.2021
+Update date: 18.10.2021
 Python: 3.9.7
 
 Important Note:
@@ -36,6 +38,12 @@ Comment input, and paste your own url to skip input function
 How to run:
 1) First read everything above.
 2) pass "python3 main.py" to cmd or run this program from editor ex. pycharm
+
+Error codes:
+001 - Problem with internet connection.
+002 - Problem with url, probably url is not defined.
+003 - Provided wrong url.
+004 - Mail template is not in cwd. Paste it in with correct name.
 '''
 
 
@@ -49,14 +57,32 @@ def main():
     # Comment/Uncomment this line to skip input function/to run input function
     # url = input("Pass url to cathedral workers (skos only!): ")
     print('7 % - Making HTTP request to get persons list')
-    list_of_persons = asyncio.run(http_request_first_page(url))
+    try:
+        list_of_persons = asyncio.run(http_request_first_page(url))
+    except aiohttp.ClientConnectorError:
+        print('Can not connect to the internet, check your connection before restart!')
+        exit('Exit with error code: 001')
+    except NameError:
+        print('Provide url to url variable or to input function. Check description for more')
+        exit('Exit with error code: 002')
+    except aiohttp.InvalidURL:
+        print('Provided wrong url. Check url variable or input before restart')
+        exit('Exit with error code: 003')
     print('31 % - Got person list, passing it to async request function')
-    http_response = asyncio.run(http_req(list_of_persons))
+    try:
+        http_response = asyncio.run(http_req(list_of_persons))
+    except aiohttp.ClientConnectorError:
+        print('Can not connect to the internet, check your connection before restart!')
+        exit('Exit with error code: 001')
     print('49 % - Finished HTTP request, got all files without problems, passing to scrap function')
     better_info = scrap_person_info(http_response, list_of_persons)
     print('79 % - Starting last stage - file write')
-    asyncio.run(save(better_info))
-    print('100 % - Everything done, file saved it maile folder')
+    try:
+        asyncio.run(save(better_info))
+    except FileNotFoundError:
+        print('Template file not found!')
+        exit('Exit with error code: 004')
+    print('100 % - Everything done, file saved to "maile" folder')
 
 
 if __name__ == '__main__':
