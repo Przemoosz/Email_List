@@ -36,15 +36,19 @@ def tasks_creation(session, list_of_persons):
 # Async function which takes tasks and makes a lot of GET requests
 # Aiohttp and asyncio allows to make request when we are waiting for response from server
 async def http_req(list_of_persons):
-    async with aiohttp.ClientSession() as session:
-        # Get tasks
-        tasks = tasks_creation(session, list_of_persons)
-        print('43 % - Started async HTTP requests')
-        responses = await asyncio.gather(*tasks)
-        text_responses = []
-        for i in responses:
-            text_responses.append(await i.text())
-        return text_responses
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Get tasks
+            tasks = tasks_creation(session, list_of_persons)
+            print('43 % - Started async HTTP requests')
+            responses = await asyncio.gather(*tasks)
+            text_responses = []
+            for i in responses:
+                text_responses.append(await i.text())
+            return text_responses
+    except aiohttp.ClientConnectorError:
+        print('Can not connect to the internet, check your connection before restart!')
+        exit('Exit with error code: 001')
 
 
 # Sync function which takes scraped data and match them with algorithm

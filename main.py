@@ -69,11 +69,7 @@ def main():
         print('Provided wrong url. Check url variable or input before restart')
         exit('Exit with error code: 003')
     print('31 % - Got person list, passing it to async request function')
-    try:
-        http_response = asyncio.run(http_req(list_of_persons))
-    except aiohttp.ClientConnectorError:
-        print('Can not connect to the internet, check your connection before restart!')
-        exit('Exit with error code: 001')
+    http_response = asyncio.run(http_req(list_of_persons))
     print('49 % - Finished HTTP request, got all files without problems, passing to scrap function')
     better_info = scrap_person_info(http_response, list_of_persons)
     print('79 % - Starting last stage - file write')
