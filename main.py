@@ -5,12 +5,13 @@ from asyncfunctions import (http_req,
                             save)
 from functions import scrap_person_info
 from decorators import func_timer
+import multiprocessing
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
+Version: Beta 1.1.0
 Creation date: 16.10.2021
-Update date: 18.10.2021
+Update date: 08.11.2021
 Python: 3.9.7
 
 Important Note:
@@ -47,6 +48,35 @@ Error codes:
 '''
 
 
+def multiprocessing_management(http_response, list_of_persons):
+    t = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    cpu_numbers = multiprocessing.cpu_count()
+    tasks_per_cpu = (len(http_response) // cpu_numbers)
+    task_cpu = []
+    list_of_tasks = []
+    i = 0
+    for x in http_response:
+        task_cpu.append(x)
+        if len(task_cpu) == tasks_per_cpu and len(list_of_tasks) != cpu_numbers:
+            list_of_tasks.append(task_cpu)
+            task_cpu = []
+        if len(list_of_tasks) == cpu_numbers and len(list_of_tasks[-1]) == tasks_per_cpu:
+            list_of_tasks[i].append(x)
+            i += 1
+    process_list = []
+    queue_results = multiprocessing.Queue()
+    [process_list.append(multiprocessing.Process(target=simple, args=(http_response, list_of_persons, queue_results,))) for x in list_of_tasks]
+    [process.start() for process in process_list]
+    [process.join() for process in process_list]
+    [process.close() for process in process_list]
+    [print(queue_results.get()) for _ in list_of_tasks]
+    pass
+
+
+def simple(http_response, list_of_persons, queue):
+    return_value = scrap_person_info(http_response, list_of_persons)
+    queue.put(return_value)
+
 @func_timer(mode=True)
 def main():
     # Here you can pass your own url
@@ -71,7 +101,8 @@ def main():
     print('31 % - Got person list, passing it to async request function')
     http_response = asyncio.run(http_req(list_of_persons))
     print('49 % - Finished HTTP request, got all files without problems, passing to scrap function')
-    better_info = scrap_person_info(http_response, list_of_persons)
+    better_info = multiprocessing_management(http_response,list_of_persons)
+    #better_info = scrap_person_info(http_response, list_of_persons)
     print('79 % - Starting last stage - file write')
     try:
         asyncio.run(save(better_info))
@@ -82,4 +113,6 @@ def main():
 
 
 if __name__ == '__main__':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     main()
+    #multiprocessing_management(1)
