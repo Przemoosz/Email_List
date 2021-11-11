@@ -8,9 +8,9 @@ from decorators import func_timer
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
+Version: 1.0.3
 Creation date: 16.10.2021
-Update date: 18.10.2021
+Update date: 11.11.2021
 Python: 3.9.7
 
 Important Note:
@@ -82,4 +82,5 @@ def main():
 
 
 if __name__ == '__main__':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     main()

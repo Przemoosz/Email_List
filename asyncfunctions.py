@@ -6,8 +6,8 @@ import os
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
-Update date: 17.10.2021
+Version: 1.0.3
+Update date: 11.11.2021
 Python: 3.9.7
 Async functions files, you should not change anything here! Expect name variable
 '''
