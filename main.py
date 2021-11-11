@@ -1,9 +1,11 @@
 import asyncio
+import time
+
 import aiohttp
 from asyncfunctions import (http_req,
                             http_request_first_page,
                             save)
-from functions import scrap_person_info
+from functions import scrap_person_info, mp_scrap
 from decorators import func_timer
 import multiprocessing
 
@@ -48,34 +50,67 @@ Error codes:
 '''
 
 
-def multiprocessing_management(http_response, list_of_persons):
-    t = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+def multiprocessing_management(http_response, url_lists):
+    # Number of logic processors
     cpu_numbers = multiprocessing.cpu_count()
+    # Amount of html files to scrap per cpu
     tasks_per_cpu = (len(http_response) // cpu_numbers)
+    # Task for one cpu
     task_cpu = []
-    list_of_tasks = []
+    task_url_cpu = []
+    # List with lists of tasks per each cpu - html files
+    list_of_html_per_cpu = []
+    list_of_urls_per_cpu = []
     i = 0
-    for x in http_response:
+    for x, y in zip(http_response, url_lists):
+        task_url_cpu.append(y)
         task_cpu.append(x)
-        if len(task_cpu) == tasks_per_cpu and len(list_of_tasks) != cpu_numbers:
-            list_of_tasks.append(task_cpu)
+        if len(task_cpu) == tasks_per_cpu and len(list_of_html_per_cpu) != cpu_numbers:
+            list_of_html_per_cpu.append(task_cpu)
+            list_of_urls_per_cpu.append(task_url_cpu)
             task_cpu = []
-        if len(list_of_tasks) == cpu_numbers and len(list_of_tasks[-1]) == tasks_per_cpu:
-            list_of_tasks[i].append(x)
+            task_url_cpu = []
+        if len(list_of_html_per_cpu) == cpu_numbers and len(list_of_html_per_cpu[-1]) == tasks_per_cpu:
+            list_of_html_per_cpu[i].append(x)
+            list_of_urls_per_cpu[i].append(y)
             i += 1
+    print(list_of_urls_per_cpu)
     process_list = []
     queue_results = multiprocessing.Queue()
-    [process_list.append(multiprocessing.Process(target=simple, args=(http_response, list_of_persons, queue_results,))) for x in list_of_tasks]
-    [process.start() for process in process_list]
-    [process.join() for process in process_list]
-    [process.close() for process in process_list]
-    [print(queue_results.get()) for _ in list_of_tasks]
+    barrier = multiprocessing.Barrier(len(list_of_html_per_cpu))
+    #multiprocessing.set_start_method('spawn')
+    # [process_list.append(
+    #     multiprocessing.Process(target=simple, args=(http_response,list_of_persons, queue_results, barrier))) for x,y in
+    #  zip(list_of_html_per_cpu,list_of_urls_per_cpu)]
+    p1 = multiprocessing.Process(target=mp_scrap, args=(list_of_html_per_cpu[0],list_of_urls_per_cpu[0],barrier,queue_results))
+    p1.start()
+    p1.join()
+    p1.close()
+    print(queue_results.get())
+    # p1 = multiprocessing.Process(target=simple, args=([http_response[0],http_response[1]],list_of_persons,queue_results,))
+    # p1.start()
+    # print(queue_results.get())
+    # p =queue_results.get()
+    # p1.join()
+    # time.sleep(4)
+    # p1.close()
+    # [process.start() for process in process_list]
+    # [process.join() for process in process_list]
+    # [process.close() for process in process_list]
+    print('cpu closed')
+    # [print(queue_results.get()) for _ in list_of_tasks]
+    # return p
     pass
 
 
-def simple(http_response, list_of_persons, queue):
-    return_value = scrap_person_info(http_response, list_of_persons)
-    queue.put(return_value)
+def simple(http_response, list_of_persons, queue, barrier):
+    # problem przy odbieraniu returna
+    scrap_person_info(http_response, list_of_persons)
+    barrier.wait()
+    print("waiting on barier")
+    print("Done")
+    # queue.put(return_value)
+
 
 @func_timer(mode=True)
 def main():
@@ -101,11 +136,12 @@ def main():
     print('31 % - Got person list, passing it to async request function')
     http_response = asyncio.run(http_req(list_of_persons))
     print('49 % - Finished HTTP request, got all files without problems, passing to scrap function')
-    better_info = multiprocessing_management(http_response,list_of_persons)
-    #better_info = scrap_person_info(http_response, list_of_persons)
+    better_info = multiprocessing_management(http_response, list_of_persons)
+    # better_info = scrap_person_info(http_response, list_of_persons)
     print('79 % - Starting last stage - file write')
     try:
-        asyncio.run(save(better_info))
+        #asyncio.run(save(better_info))
+        pass
     except FileNotFoundError:
         print('Template file not found!')
         exit('Exit with error code: 004')
@@ -115,4 +151,4 @@ def main():
 if __name__ == '__main__':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     main()
-    #multiprocessing_management(1)
+    # multiprocessing_management(1)
