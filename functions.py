@@ -1,14 +1,19 @@
 from bs4 import BeautifulSoup
-import multiprocessing
+
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
-Update date: 17.10.2021
+Version: Beta 1.1.0
+Update date: 11.11.2021
 Python: 3.9.7
 Sync function file, you should not change anything here!
+
+Beta 1.1.0 info:
+Now containing function for multiprocessing unit. Old functions still remains,
+but they are not used in Beta version
 '''
 
-# Scraps urls from cathedral page and returns a list of urls (persons)
+
+# Scraps urls from cathedral page and returns a list of urls (persons) - Not used in this version!
 def scrap_persons(page):
     print('19 % - Started persons urls scraping')
     soup = BeautifulSoup(page, 'lxml')
@@ -24,7 +29,7 @@ def scrap_persons(page):
     return list_of_persons
 
 
-# Scraps person page to get information about title, name and surname
+# Scraps person page to get information about title, name and surname - Not used in this version!
 def scrap_person_info(http_responses, url_lists):
     print('55 % - Started first stage person scraping')
     persons_info = []
@@ -40,7 +45,7 @@ def scrap_person_info(http_responses, url_lists):
 
 
 # The function which takes a list of tuples and manipulates them to take the info about gender and pass
-# more friendly list of tuples with information about the person
+# more friendly list of tuples with information about the person - Not used in this version!
 def getting_better_info(information_list):
     print('67 % - Started second stage person scraping')
     returning_list = []
@@ -68,8 +73,10 @@ def file_read():
     with open('mail_context.txt', 'r', encoding='utf-8') as file:
         text = file.read()
         return text
-def mp_scrap(http_responses, url_lists, barrier,queue):
-    print('55 % - Started first stage person scraping')
+
+# This is function scrap_person_info and getting_better_info in onr function,
+# only for multiprocessing purpose
+def mp_scrap(http_responses, url_lists, barrier, queue):
     persons_info = []
     for page in http_responses:
         soup = BeautifulSoup(page, 'lxml')
@@ -77,9 +84,7 @@ def mp_scrap(http_responses, url_lists, barrier,queue):
         title = ',' + soup.find('td', class_='title').text
         # print(name+title)
         persons_info.append(name + title)
-    print(persons_info)
     information_list = list(zip(persons_info, url_lists))
-    print(list(information_list))
     returning_list = []
     for i in information_list:
         if len(i[0].split(',')) == 3:
@@ -93,42 +98,7 @@ def mp_scrap(http_responses, url_lists, barrier,queue):
             returning_list.append(returning_tuple)
         else:
             continue
-    print('73 % - Finished stage')
-    #print(returning_list)
-    #barrier.wait()
     queue.put(returning_list)
-    return returning_list
-
-# def mp_scrap_person(page):
-#     print('19 % - Started persons urls scraping')
-#     soup = BeautifulSoup(page, 'lxml')
-#     list_of_persons = []
-#     for person in soup.find_all('li'):
-#         if person.find('a', href=True) is None:
-#             continue
-#         if 'osoba' not in person.find('a', href=True).attrs['href']:
-#             continue
-#         link = person.find('a', href=True).attrs['href']
-#         list_of_persons.append(link)
-#     print('25 % - Finished scraping urls')
-#     return list_of_persons
-#
-# def mp_getting_better_info(information_list):
-#     print('67 % - Started second stage person scraping')
-#     returning_list = []
-#
-#     for i in information_list:
-#         if len(i[0].split(',')) == 3:
-#             # print(i[0].split(','))
-#             name = i[0].split(',')[0].split(' ')[0]
-#             title = i[0].split(',')[1]
-#             if name[-1] == 'a':
-#                 plec = 'F'
-#             else:
-#                 plec = 'M'
-#             returning_tuple = (i[0].split(',')[0], title, plec, i[0].split(',')[2], i[1])
-#             returning_list.append(returning_tuple)
-#         else:
-#             continue
-#     print('73 % - Finished second stage')
-#     return returning_list
+    barrier.wait()
+    # return not needed, queue is used to communicate with the main thread
+    return None

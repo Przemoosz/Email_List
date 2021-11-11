@@ -3,8 +3,8 @@ import time
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
-Update date: 17.10.2021
+Version: Beta 1.1.0
+Update date: 11.11.2021
 Python: 3.9.7
 It is decorator file nothing interesting here.
 You should not change anything here!

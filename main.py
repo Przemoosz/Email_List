@@ -1,20 +1,36 @@
 import asyncio
-import time
-
 import aiohttp
 from asyncfunctions import (http_req,
                             http_request_first_page,
                             save)
-from functions import scrap_person_info, mp_scrap
+from functions import mp_scrap
 from decorators import func_timer
 import multiprocessing
 
 '''
 Creator: Przemysław Szewczak
-Version: Beta 1.1.0
+Version: Beta 1.1.0 - Multiprocessing support
 Creation date: 16.10.2021
-Update date: 08.11.2021
+Update date: 11.11.2021
 Python: 3.9.7
+Recommended: No
+
+===Beta Version Info===
+This is beta version of program to scrap info about cathedral workers from agh. In this version I added
+multiprocessing support to "speed up" program. As you can see program is not working much faster. But why?
+Creating processes is a difficult and time-consuming task. For this amount od data, creating 8 process
+(For my CPU) takes more time than scraping this info using one process with one thread. There is a chance
+to speed up this program if the amount of data is large ex. 1 million html files to scrap,
+this program using parallelism will finish tasks much faster than one process program,
+even if we include time for creating process. I created this version to show that there is possibility 
+to use multiprocessing to reduce CPU bound, but its not effective with this amount of data.
+ 
+Multiprocessing version with 8 process - 13.44065390 secs
+Multiprocessing version with 4 process - 9.02717290 secs
+Single process version - 3.16778750 secs
+That's why this version is not recommended! You can change amount of process in multiprocessing_management
+function in "cpu_numbers" variable
+Use single process version instead!
 
 Important Note:
 Make sure you have modules such as: aiohttp, aiofiles, BeautifulSoup4(bs4).
@@ -47,21 +63,26 @@ Error codes:
 002 - Problem with url, probably url is not defined.
 003 - Provided wrong url.
 004 - Mail template is not in cwd. Paste it in with correct name.
+005 - Can not close process. Executed terminate method.
 '''
 
 
 def multiprocessing_management(http_response, url_lists):
+    print('45 % - Getting information about CPU, and splitting tasks between logic processors')
     # Number of logic processors
     cpu_numbers = multiprocessing.cpu_count()
+    # Type number of cpu to see the time to execute program on different amount of process
+    # cpu_numbers = 4
     # Amount of html files to scrap per cpu
     tasks_per_cpu = (len(http_response) // cpu_numbers)
     # Task for one cpu
     task_cpu = []
     task_url_cpu = []
-    # List with lists of tasks per each cpu - html files
+    # List with lists of tasks per each cpu - html files and url connected to this html
     list_of_html_per_cpu = []
     list_of_urls_per_cpu = []
     i = 0
+    # Algorithm that splits files to scrap between each of logic processors
     for x, y in zip(http_response, url_lists):
         task_url_cpu.append(y)
         task_cpu.append(x)
@@ -70,46 +91,41 @@ def multiprocessing_management(http_response, url_lists):
             list_of_urls_per_cpu.append(task_url_cpu)
             task_cpu = []
             task_url_cpu = []
+        # If all cpu got equal amount of task and there are some task not connected to any of Logic cpu,
+        # this lines add them to first processors then to second processors etc.
         if len(list_of_html_per_cpu) == cpu_numbers and len(list_of_html_per_cpu[-1]) == tasks_per_cpu:
             list_of_html_per_cpu[i].append(x)
             list_of_urls_per_cpu[i].append(y)
             i += 1
-    print(list_of_urls_per_cpu)
+    # Part of a function where process is created, then started, and then closed after
+    # returning list
     process_list = []
     queue_results = multiprocessing.Queue()
     barrier = multiprocessing.Barrier(len(list_of_html_per_cpu))
-    #multiprocessing.set_start_method('spawn')
-    # [process_list.append(
-    #     multiprocessing.Process(target=simple, args=(http_response,list_of_persons, queue_results, barrier))) for x,y in
-    #  zip(list_of_html_per_cpu,list_of_urls_per_cpu)]
-    p1 = multiprocessing.Process(target=mp_scrap, args=(list_of_html_per_cpu[0],list_of_urls_per_cpu[0],barrier,queue_results))
-    p1.start()
-    p1.join()
-    p1.close()
-    print(queue_results.get())
-    # p1 = multiprocessing.Process(target=simple, args=([http_response[0],http_response[1]],list_of_persons,queue_results,))
-    # p1.start()
-    # print(queue_results.get())
-    # p =queue_results.get()
-    # p1.join()
-    # time.sleep(4)
-    # p1.close()
-    # [process.start() for process in process_list]
-    # [process.join() for process in process_list]
-    # [process.close() for process in process_list]
-    print('cpu closed')
-    # [print(queue_results.get()) for _ in list_of_tasks]
-    # return p
-    pass
-
-
-def simple(http_response, list_of_persons, queue, barrier):
-    # problem przy odbieraniu returna
-    scrap_person_info(http_response, list_of_persons)
-    barrier.wait()
-    print("waiting on barier")
-    print("Done")
-    # queue.put(return_value)
+    print('51 % - Creating process')
+    for i in range(len(list_of_html_per_cpu)):
+        process_list.append(multiprocessing.Process(target=mp_scrap,
+                                                    args=(list_of_html_per_cpu[i],
+                                                          list_of_urls_per_cpu[i],
+                                                          barrier,
+                                                          queue_results)))
+    print(f'57 % - Starting {cpu_numbers} process')
+    [process.start() for process in process_list]
+    print(f'59 % - All {cpu_numbers} process started')
+    [process.join() for process in process_list]
+    print(f'61 % - Each process performed correctly, start closing method')
+    process_list[-1].join()
+    [process.close() for process in process_list]
+    return_list = []
+    if len(multiprocessing.active_children()) != 0:
+        [process.terminate() for process in process_list]
+        exit(exit('Exit with error code: 005'))
+    print('63 % - Process closed. Now getting information back from queue object')
+    # Creating return list for async function
+    for _ in range(len(list_of_html_per_cpu)):
+        return_list += queue_results.get()
+    print('69 % - Got information from queue, prepared return list - passing to async save function')
+    return return_list
 
 
 @func_timer(mode=True)
@@ -137,10 +153,9 @@ def main():
     http_response = asyncio.run(http_req(list_of_persons))
     print('49 % - Finished HTTP request, got all files without problems, passing to scrap function')
     better_info = multiprocessing_management(http_response, list_of_persons)
-    # better_info = scrap_person_info(http_response, list_of_persons)
     print('79 % - Starting last stage - file write')
     try:
-        #asyncio.run(save(better_info))
+        asyncio.run(save(better_info))
         pass
     except FileNotFoundError:
         print('Template file not found!')
@@ -151,4 +166,3 @@ def main():
 if __name__ == '__main__':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     main()
-    # multiprocessing_management(1)

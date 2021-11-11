@@ -6,10 +6,11 @@ import os
 
 '''
 Creator: Przemysław Szewczak
-Version: 1.0.2
+Version: Beta 1.1.0
 Update date: 17.10.2021
 Python: 3.9.7
 Async functions files, you should not change anything here! Expect name variable
+Nothing changed in Beta version.
 '''
 # Paste your full name here
 name = 'Paste your full name here'
