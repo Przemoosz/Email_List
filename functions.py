@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 
 '''
 Creator: Przemysław Szewczak
-Version: Beta 1.1.0
+Version: Beta 1.1.1
 Update date: 11.11.2021
 Python: 3.9.7
 Sync function file, you should not change anything here!

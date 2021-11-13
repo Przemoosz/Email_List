@@ -9,7 +9,7 @@ import multiprocessing
 
 '''
 Creator: Przemysław Szewczak
-Version: Beta 1.1.0 - Multiprocessing support
+Version: Beta 1.1.1 - Multiprocessing support
 Creation date: 16.10.2021
 Update date: 11.11.2021
 Python: 3.9.7
@@ -112,18 +112,19 @@ def multiprocessing_management(http_response, url_lists):
     print(f'57 % - Starting {cpu_numbers} process')
     [process.start() for process in process_list]
     print(f'59 % - All {cpu_numbers} process started')
+    return_list = []
+    for _ in range(len(list_of_html_per_cpu)):
+        return_list += queue_results.get()
+    print('61 % - Getting information back from queue object')
     [process.join() for process in process_list]
-    print(f'61 % - Each process performed correctly, start closing method')
+    print(f'63 % - Each process performed correctly, start closing method')
     process_list[-1].join()
     [process.close() for process in process_list]
-    return_list = []
+    print(f'65 % - Closed all processes')
+
     if len(multiprocessing.active_children()) != 0:
         [process.terminate() for process in process_list]
         exit(exit('Exit with error code: 005'))
-    print('63 % - Process closed. Now getting information back from queue object')
-    # Creating return list for async function
-    for _ in range(len(list_of_html_per_cpu)):
-        return_list += queue_results.get()
     print('69 % - Got information from queue, prepared return list - passing to async save function')
     return return_list
 
